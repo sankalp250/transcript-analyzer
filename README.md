@@ -2,6 +2,8 @@
 
 Accepts a customer call transcript, summarizes it (2–3 sentences), classifies sentiment (positive/neutral/negative), shows results, and saves to `call_analysis.csv`.
 
+**Live app:** [Open Streamlit App](https://transcript-analyzer-4wpivnqfj4dbh7hye4sn6h.streamlit.app/)
+
 ## Setup
 
 1) Python 3.10+
