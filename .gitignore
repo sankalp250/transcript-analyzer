@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+.eggs/
+
+# Environments
+venv/
+.env
+.venv/
+
+# Streamlit
+.streamlit/
+
+# OS/Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Data/Artifacts
+*.csv
+!call_analysis.csv
