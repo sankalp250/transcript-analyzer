@@ -2,25 +2,31 @@ import os
 import csv
 import streamlit as st
 from dotenv import load_dotenv
+from pathlib import Path
 
 from app.groq_client import analyze_transcript
 from app.utils import redact_pii
 
+# Streamlit config MUST be first Streamlit call
+st.set_page_config(page_title="Call Transcript Analyzer", page_icon="📞", layout="centered")
 
 load_dotenv()
 
-# Load secrets from Streamlit Cloud if present
-try:
-	if "GROQ_API_KEY" in st.secrets and not os.getenv("GROQ_API_KEY"):
-		os.environ["GROQ_API_KEY"] = st.secrets["GROQ_API_KEY"].strip()
-	except_key = None
-except Exception as except_key:
-	pass
+# Only touch st.secrets if a secrets.toml exists
+PROJECT_SECRETS = Path(os.getcwd()) / ".streamlit" / "secrets.toml"
+HOME_SECRETS = Path.home() / ".streamlit" / "secrets.toml"
+SECRETS_AVAILABLE = PROJECT_SECRETS.is_file() or HOME_SECRETS.is_file()
 
-if "GROQ_MODEL" in st.secrets and not os.getenv("GROQ_MODEL"):
-	os.environ["GROQ_MODEL"] = str(st.secrets["GROQ_MODEL"]).strip()
-
-st.set_page_config(page_title="Call Transcript Analyzer", page_icon="📞", layout="centered")
+if SECRETS_AVAILABLE:
+	try:
+		secret_key = st.secrets.get("GROQ_API_KEY")
+		if secret_key and not os.getenv("GROQ_API_KEY"):
+			os.environ["GROQ_API_KEY"] = str(secret_key).strip()
+		secret_model = st.secrets.get("GROQ_MODEL")
+		if secret_model and not os.getenv("GROQ_MODEL"):
+			os.environ["GROQ_MODEL"] = str(secret_model).strip()
+	except Exception:
+		pass
 
 # Sidebar: GROQ key management
 with st.sidebar:
@@ -62,7 +68,7 @@ if analyze:
 
 	# Re-check key before calling API
 	if not os.getenv("GROQ_API_KEY"):
-		st.error("GROQ_API_KEY is not set. Open the sidebar or set Streamlit Secrets.")
+		st.error("GROQ_API_KEY is not set. Open the sidebar or set a .env.")
 		st.stop()
 
 	original_text = transcript.strip()
@@ -100,5 +106,26 @@ if analyze:
 			writer.writerow([original_text, summary, sentiment])
 		st.success("Saved to call_analysis.csv")
 		st.code(csv_path)
+
+		# Download buttons: full CSV and latest row only
+		with open(csv_path, "rb") as rf:
+			st.download_button(
+				label="Download call_analysis.csv",
+				data=rf.read(),
+				file_name="call_analysis.csv",
+				mime="text/csv",
+			)
+
+		latest_row_csv = "Transcript,Summary,Sentiment\n" + ",".join([
+			'"' + original_text.replace('"', '""') + '"',
+			'"' + summary.replace('"', '""') + '"',
+			'"' + sentiment.replace('"', '""') + '"',
+		]) + "\n"
+		st.download_button(
+			label="Download latest result (CSV)",
+			data=latest_row_csv.encode("utf-8"),
+			file_name="latest_call_analysis.csv",
+			mime="text/csv",
+		)
 	except Exception as e:
 		st.warning(f"Could not save to CSV: {e}")
